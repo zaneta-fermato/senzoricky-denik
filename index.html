@@ -226,7 +226,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://script.google.com/a/macros/fermato.cz/s/AKfycbxSYOUjwn8SwOQyLyY96CTTN29PLUICHQcIi2skkUpEbP-ubOVleP0PV5hUkjGc97Zl/exec';
+const API = 'https://script.google.com/a/macros/fermato.cz/s/AKfycbxqrwIuCAFpJ04yw-19B2qKfZZtNI5MVogl6Y7NDS6nZYzMiWDCnFSsPcUhpf0Wyail/exec';
 
 // ── LOCAL CONFIG (výrobky, objemy, hodnotitelé, EAN — uloženy lokálně) ────────
 let CFG = JSON.parse(localStorage.getItem('sd_cfg') || '{}');
@@ -252,10 +252,8 @@ async function fetchZaznamy(force=false) {
 }
 
 async function pushZaznam(zaznam) {
-  const r = await fetch(API+'?action=add', {
-    method:'POST',
-    body: JSON.stringify(zaznam)
-  });
+  const payload = encodeURIComponent(JSON.stringify(zaznam));
+  const r = await fetch(API+'?action=add&payload='+payload);
   const j = await r.json();
   if(!j.ok) throw new Error(j.error||'Chyba uložení');
   remoteZaznamy.unshift(zaznam);
