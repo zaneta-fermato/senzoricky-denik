@@ -43,6 +43,7 @@
   .btn-primary{background:var(--primary);color:#fff;margin-top:16px;}
   .btn-primary:disabled{background:var(--muted);cursor:not-allowed;}
   .btn-secondary{background:var(--bg);color:var(--primary);border:1.5px solid var(--primary);margin-top:8px;}
+  .btn-danger{background:var(--bg);color:var(--C);border:1.5px solid var(--C);margin-top:8px;}
   .scan-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:10px;border:2px dashed var(--primary-light);background:var(--A-bg);color:var(--primary);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;}
   .ean-found{background:var(--A-bg);border:1.5px solid var(--A);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--primary);margin-bottom:10px;display:none;}
   .ean-found.show{display:block;}
@@ -57,7 +58,11 @@
   .badge.B{background:var(--B-bg);color:var(--B);}
   .badge.C{background:var(--C-bg);color:var(--C);}
   .zaznam-poznamka{font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;}
-  .zaznam-hodnotitele{font-size:11px;color:var(--muted);margin-top:4px;}
+  .zaznam-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .zaznam-hodnotitele{font-size:11px;color:var(--muted);}
+  .zaznam-akce{display:flex;gap:6px;}
+  .btn-edit{padding:4px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer;color:var(--primary);}
+  .btn-del{padding:4px 10px;border-radius:6px;border:1.5px solid var(--C-bg);background:var(--C-bg);font-size:12px;cursor:pointer;color:var(--C);}
   .no-data{text-align:center;color:var(--muted);padding:32px 0;font-size:14px;}
   .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
   .stat-box{background:var(--card);border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border);}
@@ -93,9 +98,7 @@
   .scan-mini-btn{padding:8px 10px;border-radius:8px;border:1.5px solid var(--primary-light);background:var(--A-bg);color:var(--primary);font-size:14px;cursor:pointer;}
   .sync-bar{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:10px;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
-  .sync-dot.ok{background:var(--A);}
-  .sync-dot.err{background:var(--C);}
-  .sync-dot.loading{background:var(--B);animation:pulse 1s infinite;}
+  .sync-dot.ok{background:var(--A);}.sync-dot.err{background:var(--C);}.sync-dot.loading{background:var(--B);animation:pulse 1s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   #scanner-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
   #scanner-modal.open{display:flex;}
@@ -107,6 +110,13 @@
   #scanner-hint{color:#fff;font-size:14px;margin-top:14px;text-align:center;opacity:.85;}
   #scanner-status{color:var(--accent);font-size:13px;margin-top:6px;text-align:center;min-height:18px;}
   #scanner-close{margin-top:20px;padding:12px 40px;border-radius:24px;border:none;background:#fff;color:var(--primary);font-size:15px;font-weight:600;cursor:pointer;}
+
+  /* EDIT MODAL */
+  #edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;align-items:flex-end;justify-content:center;}
+  #edit-modal.open{display:flex;}
+  #edit-inner{background:var(--card);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;}
+  #edit-inner h2{margin-bottom:16px;}
+
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;white-space:nowrap;}
   .toast.show{opacity:1;}
 </style>
@@ -124,9 +134,7 @@
 <div id="page-zadani" class="page active">
   <div class="card">
     <h2>Nové senzorické hodnocení</h2>
-    <button class="scan-btn" onclick="openScanner('form')">
-      <span style="font-size:22px">📷</span> Naskenovat EAN výrobku
-    </button>
+    <button class="scan-btn" onclick="openScanner('form')"><span style="font-size:22px">📷</span> Naskenovat EAN výrobku</button>
     <div class="ean-found" id="ean-found-msg"></div>
     <label>Datum hodnocení</label>
     <input type="date" id="f-datum">
@@ -195,13 +203,9 @@
   <div class="card"><h2>Hodnotitelé</h2><div class="tag-list" id="hodnotitele-list"></div><div class="add-row"><input type="text" id="new-hodnotitel" placeholder="Jméno"><button class="btn btn-primary" onclick="addItem('hodnotitele','new-hodnotitel')">+</button></div></div>
   <div class="card">
     <h2>EAN kódy výrobků</h2>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Přiřaď EAN kód výrobku a objemu.</p>
     <table class="ean-table"><thead><tr><th>EAN</th><th>Výrobek</th><th>Objem</th><th></th></tr></thead><tbody id="ean-tbody"></tbody></table>
     <div class="ean-add-grid">
-      <div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">EAN kód</div>
-        <div style="display:flex;gap:4px"><input type="text" id="new-ean" placeholder="1234567890123" inputmode="numeric"><button class="scan-mini-btn" onclick="openScanner('settings')" title="Naskenovat">📷</button></div>
-      </div>
+      <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">EAN kód</div><div style="display:flex;gap:4px"><input type="text" id="new-ean" placeholder="1234567890123" inputmode="numeric"><button class="scan-mini-btn" onclick="openScanner('settings')">📷</button></div></div>
       <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Výrobek</div><select id="ean-vyrobek"></select></div>
       <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Objem</div><select id="ean-objem"></select></div>
       <button class="btn btn-primary" onclick="addEan()" style="align-self:flex-end">+</button>
@@ -226,64 +230,119 @@
   <button id="scanner-close" onclick="closeScanner()">Zrušit</button>
 </div>
 
+<!-- EDIT MODAL -->
+<div id="edit-modal">
+  <div id="edit-inner">
+    <h2>Upravit hodnocení</h2>
+    <label>Datum hodnocení</label>
+    <input type="date" id="e-datum">
+    <label>Výrobek</label>
+    <select id="e-vyrobek"></select>
+    <label>Objem</label>
+    <select id="e-objem"></select>
+    <label>Datum výroby</label>
+    <input type="date" id="e-vyroba" oninput="updateSarzeEdit()">
+    <label>Šarže</label>
+    <div class="sarze-row">
+      <div><label style="margin-top:0">Stroj #</label><input type="number" id="e-stroj" min="1" max="9" oninput="updateSarzeEdit()"></div>
+      <div><label style="margin-top:0">Pořadí</label><input type="number" id="e-poradi" min="1" oninput="updateSarzeEdit()"></div>
+    </div>
+    <div class="sarze-preview" id="e-sarze-preview" style="margin-bottom:8px"></div>
+    <div style="margin-top:4px">
+      <div style="font-size:14px;color:var(--muted);margin-bottom:8px;font-weight:500">Hodnocení</div>
+      <div class="znamka-row"><span class="znamka-label">Vzhled</span><div class="znamka-btns"><button class="zn-btn A" onclick="setZnEdit('vzhled','A',this)">A</button><button class="zn-btn B" onclick="setZnEdit('vzhled','B',this)">B</button><button class="zn-btn C" onclick="setZnEdit('vzhled','C',this)">C</button></div></div>
+      <div class="znamka-row"><span class="znamka-label">Vůně</span><div class="znamka-btns"><button class="zn-btn A" onclick="setZnEdit('vune','A',this)">A</button><button class="zn-btn B" onclick="setZnEdit('vune','B',this)">B</button><button class="zn-btn C" onclick="setZnEdit('vune','C',this)">C</button></div></div>
+      <div class="znamka-row"><span class="znamka-label">Chuť</span><div class="znamka-btns"><button class="zn-btn A" onclick="setZnEdit('chut','A',this)">A</button><button class="zn-btn B" onclick="setZnEdit('chut','B',this)">B</button><button class="zn-btn C" onclick="setZnEdit('chut','C',this)">C</button></div></div>
+      <div class="poznamka-wrap" id="e-poznamka-wrap">
+        <label>Poznámka k hodnocení B/C</label>
+        <textarea id="e-poznamka"></textarea>
+      </div>
+    </div>
+    <label>Hodnotitelé</label>
+    <div class="hodnotitele-grid" id="e-hodnotitele-grid"></div>
+    <label>Záznam zadal</label>
+    <select id="e-zadal"></select>
+    <button class="btn btn-primary" id="btn-edit-save" onclick="saveEdit()">✓ Uložit změny</button>
+    <button class="btn btn-secondary" onclick="closeEdit()">Zrušit</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycby5w21uaGdT2MnmVaZRtrXJQlx5zxaI0bf-_pSUPdgOpE1cyC9i2M8FaYwbIRaky_ws/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyo9FrpbyxGgHmxlmPGYrnGvmpWDtHqhalLa0HjQ-6vzZZSaUwayQquI4-dalYwYkY/exec';
 
-// ── LOCAL CONFIG (výrobky, objemy, hodnotitelé, EAN — uloženy lokálně) ────────
-let CFG = JSON.parse(localStorage.getItem('sd_cfg') || '{}');
+let CFG = JSON.parse(localStorage.getItem('sd_cfg')||'{}');
 if(!CFG.vyrobky) CFG.vyrobky=['Dresink Classic','Dresink Pesto','Dresink Chipotle','Omáčka BBQ','Šrub citron','Ocet jablečný'];
 if(!CFG.objemy)  CFG.objemy=['100 ml','250 ml','500 ml','1000 ml'];
 if(!CFG.hodnotitele) CFG.hodnotitele=['Žaneta','Jana','Tomáš','Martin'];
 if(!CFG.ean)     CFG.ean={};
 function saveCfg(){localStorage.setItem('sd_cfg',JSON.stringify(CFG));}
 
-// ── REMOTE DATA ───────────────────────────────────────────────────────────────
-let remoteZaznamy = [];
-let lastFetch = 0;
+let remoteZaznamy=[], lastFetch=0;
+let znamky={vzhled:null,vune:null,chut:null};
+let selH=[];
+let editZnamky={vzhled:null,vune:null,chut:null};
+let editSelH=[];
+let editId=null;
 
-async function fetchZaznamy(force=false) {
-  if(!force && Date.now()-lastFetch < 60000) return; // cache 1 min
+// ── API ───────────────────────────────────────────────────────────────────────
+async function fetchZaznamy(force=false){
+  if(!force&&Date.now()-lastFetch<60000)return;
   setSyncStatus('loading','Načítám data…');
-  try {
-    const r = await fetch(API+'?action=get');
-    const j = await r.json();
-    if(j.ok){ remoteZaznamy=j.data; lastFetch=Date.now(); setSyncStatus('ok','Synchronizováno'); }
+  try{
+    const r=await fetch(API+'?action=get');
+    const j=await r.json();
+    if(j.ok){remoteZaznamy=j.data;lastFetch=Date.now();setSyncStatus('ok','Synchronizováno');}
     else setSyncStatus('err','Chyba načítání');
-  } catch(e){ setSyncStatus('err','Offline – data nedostupná'); }
+  }catch(e){setSyncStatus('err','Offline');}
 }
 
-async function pushZaznam(zaznam) {
-  const payload = encodeURIComponent(JSON.stringify(zaznam));
-  const r = await fetch(API+'?action=add&payload='+payload);
-  const j = await r.json();
-  if(!j.ok) throw new Error(j.error||'Chyba uložení');
+async function pushZaznam(zaznam){
+  const payload=encodeURIComponent(JSON.stringify(zaznam));
+  const r=await fetch(API+'?action=add&payload='+payload);
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'Chyba uložení');
+  zaznam.id=j.id;
   remoteZaznamy.unshift(zaznam);
-  lastFetch = Date.now();
+  lastFetch=Date.now();
 }
 
-function setSyncStatus(state, txt) {
-  ['z'].forEach(s => {
-    const dot = document.getElementById('sync-dot-'+s);
-    const label = document.getElementById('sync-txt-'+s);
-    if(dot){ dot.className='sync-dot '+state; }
-    if(label) label.textContent = txt;
-  });
+async function deleteZaznam(id){
+  const r=await fetch(API+'?action=delete&id='+id);
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'Chyba mazání');
+  remoteZaznamy=remoteZaznamy.filter(z=>z.id!==id);
 }
 
-// ── NAV ──────────────────────────────────────────────────────────────────────
+async function updateZaznam(zaznam){
+  const payload=encodeURIComponent(JSON.stringify(zaznam));
+  const r=await fetch(API+'?action=update&payload='+payload);
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'Chyba úpravy');
+  const idx=remoteZaznamy.findIndex(z=>z.id===zaznam.id);
+  if(idx>=0)remoteZaznamy[idx]=zaznam;
+}
+
+function setSyncStatus(state,txt){
+  const dot=document.getElementById('sync-dot-z');
+  const lbl=document.getElementById('sync-txt-z');
+  if(dot)dot.className='sync-dot '+state;
+  if(lbl)lbl.textContent=txt;
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  if(btn) btn.classList.add('active');
+  if(btn)btn.classList.add('active');
   if(id==='zaznamy'){fetchZaznamy().then(()=>{fillMesicFilter();renderZaznamy();});}
   if(id==='dashboard'){fetchZaznamy().then(()=>renderDashboard());}
-  if(id==='nastaveni') renderNastaveni();
+  if(id==='nastaveni')renderNastaveni();
 }
 
-// ── FORM ─────────────────────────────────────────────────────────────────────
+// ── FORM ──────────────────────────────────────────────────────────────────────
 function initForm(){
   document.getElementById('f-datum').value=today();
   fillSel('f-vyrobek',CFG.vyrobky);
@@ -300,10 +359,6 @@ function renderHGrid(){
   document.getElementById('hodnotitele-grid').innerHTML=CFG.hodnotitele.map(h=>
     `<div class="hodnotitel-chip${selH.includes(h)?' selected':''}" onclick="toggleH('${h}',this)">${h}</div>`).join('');
 }
-
-let znamky={vzhled:null,vune:null,chut:null};
-let selH=[];
-
 function toggleH(n,el){selH.includes(n)?selH=selH.filter(x=>x!==n):selH.push(n);el.classList.toggle('selected');}
 
 // ── ŠARŽE ────────────────────────────────────────────────────────────────────
@@ -315,87 +370,60 @@ function updateSarze(){
   const dmt=new Date(v);dmt.setFullYear(dmt.getFullYear()+1);
   document.getElementById('sarze-preview').textContent=fmtDate(dmt.toISOString().split('T')[0])+' '+s+'-'+p;
 }
-function getSarze(){
-  const v=document.getElementById('f-vyroba').value;if(!v)return null;
+function getSarze(vEl,sEl,pEl){
+  const v=document.getElementById(vEl).value;if(!v)return null;
   const dmt=new Date(v);dmt.setFullYear(dmt.getFullYear()+1);
-  return fmtDate(dmt.toISOString().split('T')[0])+' '+(document.getElementById('f-stroj').value||'?')+'-'+(document.getElementById('f-poradi').value||'?');
+  return fmtDate(dmt.toISOString().split('T')[0])+' '+(document.getElementById(sEl).value||'?')+'-'+(document.getElementById(pEl).value||'?');
+}
+function updateSarzeEdit(){
+  const v=document.getElementById('e-vyroba').value;
+  const s=document.getElementById('e-stroj').value||'?';
+  const p=document.getElementById('e-poradi').value||'?';
+  if(!v){document.getElementById('e-sarze-preview').textContent='';return;}
+  const dmt=new Date(v);dmt.setFullYear(dmt.getFullYear()+1);
+  document.getElementById('e-sarze-preview').textContent=fmtDate(dmt.toISOString().split('T')[0])+' '+s+'-'+p;
 }
 
-// ── ZNÁMKY ───────────────────────────────────────────────────────────────────
+// ── ZNÁMKY ────────────────────────────────────────────────────────────────────
 function setZn(param,val,btn){
   znamky[param]=val;
   btn.closest('.znamka-btns').querySelectorAll('.zn-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
   document.getElementById('poznamka-wrap').classList.toggle('show',Object.values(znamky).some(z=>z==='B'||z==='C'));
 }
+function setZnEdit(param,val,btn){
+  editZnamky[param]=val;
+  btn.closest('.znamka-btns').querySelectorAll('.zn-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('e-poznamka-wrap').classList.toggle('show',Object.values(editZnamky).some(z=>z==='B'||z==='C'));
+}
 
-// ── SCANNER ──────────────────────────────────────────────────────────────────
-let scanTarget=null, scanStream=null, scanRaf=null;
-
+// ── SCANNER ───────────────────────────────────────────────────────────────────
+let scanTarget=null, zxingReader=null;
 function openScanner(target){
   scanTarget=target;
   document.getElementById('scanner-modal').classList.add('open');
   document.getElementById('scanner-status').textContent='Spouštím kameru…';
-  startCamera();
+  startZxing();
 }
 function closeScanner(){
   document.getElementById('scanner-modal').classList.remove('open');
-  stopCamera();
+  stopZxing();
 }
-function startCamera(){
+function startZxing(){
   const video=document.getElementById('scanner-video');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}})
-    .then(stream=>{
-      scanStream=stream; video.srcObject=stream;
-      video.onloadedmetadata=()=>{video.play();document.getElementById('scanner-status').textContent='Hledám čárový kód…';scanLoop();};
-    })
-    .catch(err=>{document.getElementById('scanner-status').textContent='Chyba: '+err.message;showToast('⚠ Kamera nedostupná');});
+  try{
+    zxingReader=new ZXing.BrowserMultiFormatReader();
+    zxingReader.decodeFromVideoDevice(null,video,(result,err)=>{
+      if(result){const code=result.getText();stopZxing();document.getElementById('scanner-modal').classList.remove('open');handleEAN(code);}
+    });
+    document.getElementById('scanner-status').textContent='Hledám čárový kód…';
+  }catch(e){document.getElementById('scanner-status').textContent='Chyba: '+e.message;}
 }
-function stopCamera(){
-  if(scanRaf){cancelAnimationFrame(scanRaf);scanRaf=null;}
-  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
-  document.getElementById('scanner-video').srcObject=null;
-}
-function scanLoop(){
-  const video=document.getElementById('scanner-video'),canvas=document.getElementById('scanner-canvas');
-  if(!scanStream||video.readyState<2){scanRaf=requestAnimationFrame(scanLoop);return;}
-  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-  const ctx=canvas.getContext('2d');ctx.drawImage(video,0,0);
-  const x=Math.floor(canvas.width*.1),y=Math.floor(canvas.height*.35),w=Math.floor(canvas.width*.8),h=Math.floor(canvas.height*.3);
-  try{const code=decodeEAN(ctx.getImageData(x,y,w,h));if(code){stopCamera();document.getElementById('scanner-modal').classList.remove('open');handleEAN(code);return;}}catch(e){}
-  scanRaf=requestAnimationFrame(scanLoop);
-}
-function decodeEAN(imgData){
-  const{data,width,height}=imgData,row=Math.floor(height/2);
-  const gray=new Uint8Array(width);
-  for(let x=0;x<width;x++){const i=(row*width+x)*4;gray[x]=Math.round(.299*data[i]+.587*data[i+1]+.114*data[i+2]);}
-  let sum=0;for(let i=0;i<gray.length;i++)sum+=gray[i];
-  const thresh=sum/gray.length*.85;
-  const bits=gray.map(v=>v<thresh?1:0);
-  const runs=[];let cur=bits[0],cnt=1;
-  for(let i=1;i<bits.length;i++){if(bits[i]===cur)cnt++;else{runs.push({v:cur,n:cnt});cur=bits[i];cnt=1;}}
-  runs.push({v:cur,n:cnt});
-  return tryEAN13(runs);
-}
-const LC={'3211':'0','2221':'1','2122':'2','1411':'3','1132':'4','1231':'5','1114':'6','1312':'7','1213':'8','3112':'9'};
-const RC={'1123':'0','2213':'1','2312':'2','4141':'3','1141':'4','1312':'5','4111':'6','2132':'7','2231':'8','3121':'9'};
-function tryEAN13(runs){
-  const total=runs.reduce((s,r)=>s+r.n,0);if(total<50)return null;
-  const unit=total/95;if(unit<1)return null;
-  const mods=runs.map(r=>Math.max(1,Math.round(r.n/unit)));
-  for(let i=0;i<mods.length-56;i++){
-    if(mods[i]===1&&mods[i+1]===1&&mods[i+2]===1){
-      const digits=[];let ok=true,pos=i+3;
-      for(let d=0;d<6&&ok;d++){if(pos+3>=mods.length){ok=false;break;}const k=mods.slice(pos,pos+4).join('');LC[k]!==undefined?digits.push(+LC[k]):ok=false;pos+=4;}
-      if(!ok)continue;if(pos+4>=mods.length)continue;pos+=5;
-      for(let d=0;d<6&&ok;d++){if(pos+3>=mods.length){ok=false;break;}const k=mods.slice(pos,pos+4).join('');RC[k]!==undefined?digits.push(+RC[k]):ok=false;pos+=4;}
-      if(!ok||digits.length!==12)continue;
-      let s=0;digits.forEach((v,j)=>s+=j%2===0?v:v*3);
-      const check=(10-s%10)%10;
-      if(((10-digits.reduce((a,v,j)=>a+(j%2===0?v:v*3),0)%10)%10)===check)return digits.join('')+check;
-    }
-  }
-  return null;
+function stopZxing(){
+  if(zxingReader){try{zxingReader.reset();}catch(e){}zxingReader=null;}
+  const video=document.getElementById('scanner-video');
+  if(video.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null;}
 }
 function handleEAN(code){
   if(scanTarget==='settings'){document.getElementById('new-ean').value=code;showToast('📷 Naskenováno: '+code);return;}
@@ -408,38 +436,18 @@ function handleEAN(code){
     msg.classList.add('show');setTimeout(()=>msg.classList.remove('show'),3000);showToast('✓ Výrobek rozpoznán');
   }else{
     msg.style.background='var(--C-bg)';msg.style.borderColor='var(--C)';msg.style.color='var(--C)';
-    msg.textContent='EAN '+code+' není v databázi — přidej ho v Nastavení → EAN kódy';
+    msg.textContent='EAN '+code+' není v databázi';
     msg.classList.add('show');setTimeout(()=>{msg.classList.remove('show');msg.style.cssText='';},4000);
-    showToast('⚠ Neznámý EAN: '+code);
   }
 }
 
-// ── EAN MANAGEMENT ───────────────────────────────────────────────────────────
-function renderEanTable(){
-  const entries=Object.entries(CFG.ean);
-  document.getElementById('ean-tbody').innerHTML=entries.length
-    ?entries.map(([ean,v])=>`<tr><td>${ean}</td><td>${v.vyrobek}</td><td>${v.objem}</td><td><button class="tag-del" onclick="delEan('${ean}')">×</button></td></tr>`).join('')
-    :`<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">Zatím žádné EAN kódy</td></tr>`;
-  fillSel('ean-vyrobek',CFG.vyrobky);fillSel('ean-objem',CFG.objemy);
-}
-function addEan(){
-  const ean=document.getElementById('new-ean').value.trim();
-  const vy=document.getElementById('ean-vyrobek').value;
-  const ob=document.getElementById('ean-objem').value;
-  if(!ean||!vy||!ob){showToast('⚠ Vyplňte EAN, výrobek i objem');return;}
-  if(!/^\d{8,14}$/.test(ean)){showToast('⚠ EAN musí mít 8–14 číslic');return;}
-  CFG.ean[ean]={vyrobek:vy,objem:ob};saveCfg();renderEanTable();
-  document.getElementById('new-ean').value='';showToast('✓ EAN přidán');
-}
-function delEan(ean){delete CFG.ean[ean];saveCfg();renderEanTable();}
-
-// ── ULOŽIT ───────────────────────────────────────────────────────────────────
+// ── ULOŽIT ────────────────────────────────────────────────────────────────────
 async function ulozitHodnoceni(){
   const datum=document.getElementById('f-datum').value;
   const vyrobek=document.getElementById('f-vyrobek').value;
   const objem=document.getElementById('f-objem').value;
   const vyroba=document.getElementById('f-vyroba').value;
-  const sarze=getSarze();
+  const sarze=getSarze('f-vyroba','f-stroj','f-poradi');
   const zadal=document.getElementById('f-zadal').value;
   if(!datum||!vyrobek||!objem||!vyroba||!sarze){showToast('⚠ Vyplňte všechna pole');return;}
   if(!znamky.vzhled||!znamky.vune||!znamky.chut){showToast('⚠ Zadejte všechny 3 známky');return;}
@@ -447,13 +455,12 @@ async function ulozitHodnoceni(){
   if(!zadal){showToast('⚠ Vyberte kdo záznam zadává');return;}
   const btn=document.getElementById('btn-ulozit');
   btn.disabled=true;btn.textContent='Ukládám…';
-  const zaznam={datum,vyrobek,objem,vyroba,sarze,
-    vzhled:znamky.vzhled,vune:znamky.vune,chut:znamky.chut,
-    poznamka:document.getElementById('f-poznamka').value,
-    hodnotitele:[...selH],zadal};
   try{
-    await pushZaznam(zaznam);
-    showToast('✓ Hodnocení uloženo do Google Sheets');resetForm();
+    await pushZaznam({datum,vyrobek,objem,vyroba,sarze,
+      vzhled:znamky.vzhled,vune:znamky.vune,chut:znamky.chut,
+      poznamka:document.getElementById('f-poznamka').value,
+      hodnotitele:[...selH],zadal});
+    showToast('✓ Hodnocení uloženo');resetForm();
   }catch(e){showToast('⚠ Chyba: '+e.message);}
   btn.disabled=false;btn.textContent='✓ Uložit hodnocení';
 }
@@ -462,11 +469,75 @@ function resetForm(){
   ['f-vyroba','f-stroj','f-poradi','f-poznamka'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-vyrobek').value='';document.getElementById('f-objem').value='';
   document.getElementById('poznamka-wrap').classList.remove('show');
-  document.querySelectorAll('.zn-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelectorAll('#page-zadani .zn-btn').forEach(b=>b.classList.remove('sel'));
   updateSarze();renderHGrid();
 }
 
-// ── ZÁZNAMY ──────────────────────────────────────────────────────────────────
+// ── MAZÁNÍ ────────────────────────────────────────────────────────────────────
+async function smazatZaznam(id){
+  if(!confirm('Opravdu smazat tento záznam?'))return;
+  try{
+    await deleteZaznam(id);
+    showToast('✓ Záznam smazán');
+    renderZaznamy();
+  }catch(e){showToast('⚠ Chyba: '+e.message);}
+}
+
+// ── EDITACE ───────────────────────────────────────────────────────────────────
+function otevritEdit(id){
+  const z=remoteZaznamy.find(x=>x.id===id);
+  if(!z)return;
+  editId=id;
+  editZnamky={vzhled:z.vzhled,vune:z.vune,chut:z.chut};
+  editSelH=[...z.hodnotitele];
+  document.getElementById('e-datum').value=z.datum;
+  fillSel('e-vyrobek',CFG.vyrobky);document.getElementById('e-vyrobek').value=z.vyrobek;
+  fillSel('e-objem',CFG.objemy);document.getElementById('e-objem').value=z.objem;
+  document.getElementById('e-vyroba').value=z.vyroba;
+  // rozložit šarži na stroj a pořadí
+  const parts=z.sarze.split(' ');
+  if(parts.length>1){const sp=parts[1].split('-');document.getElementById('e-stroj').value=sp[0]||'';document.getElementById('e-poradi').value=sp[1]||'';}
+  document.getElementById('e-poznamka').value=z.poznamka||'';
+  fillSel('e-zadal',CFG.hodnotitele);document.getElementById('e-zadal').value=z.zadal||'';
+  // známky
+  ['vzhled','vune','chut'].forEach(p=>{
+    document.querySelectorAll(`#edit-modal .znamka-row .zn-btn`).forEach(b=>{});
+    const btns=document.querySelectorAll(`#edit-modal .znamka-btns`);
+    const idx={'vzhled':0,'vune':1,'chut':2}[p];
+    btns[idx].querySelectorAll('.zn-btn').forEach(b=>{b.classList.remove('sel');if(b.classList.contains(z[p]))b.classList.add('sel');});
+  });
+  document.getElementById('e-poznamka-wrap').classList.toggle('show',z.vzhled!=='A'||z.vune!=='A'||z.chut!=='A');
+  // hodnotitelé
+  document.getElementById('e-hodnotitele-grid').innerHTML=CFG.hodnotitele.map(h=>
+    `<div class="hodnotitel-chip${editSelH.includes(h)?' selected':''}" onclick="toggleHEdit('${h}',this)">${h}</div>`).join('');
+  updateSarzeEdit();
+  document.getElementById('edit-modal').classList.add('open');
+}
+function toggleHEdit(n,el){editSelH.includes(n)?editSelH=editSelH.filter(x=>x!==n):editSelH.push(n);el.classList.toggle('selected');}
+function closeEdit(){document.getElementById('edit-modal').classList.remove('open');editId=null;}
+
+async function saveEdit(){
+  const datum=document.getElementById('e-datum').value;
+  const vyrobek=document.getElementById('e-vyrobek').value;
+  const objem=document.getElementById('e-objem').value;
+  const vyroba=document.getElementById('e-vyroba').value;
+  const sarze=getSarze('e-vyroba','e-stroj','e-poradi');
+  const zadal=document.getElementById('e-zadal').value;
+  if(!datum||!vyrobek||!objem||!vyroba||!sarze){showToast('⚠ Vyplňte všechna pole');return;}
+  if(!editZnamky.vzhled||!editZnamky.vune||!editZnamky.chut){showToast('⚠ Zadejte všechny 3 známky');return;}
+  const btn=document.getElementById('btn-edit-save');
+  btn.disabled=true;btn.textContent='Ukládám…';
+  try{
+    await updateZaznam({id:editId,datum,vyrobek,objem,vyroba,sarze,
+      vzhled:editZnamky.vzhled,vune:editZnamky.vune,chut:editZnamky.chut,
+      poznamka:document.getElementById('e-poznamka').value,
+      hodnotitele:[...editSelH],zadal});
+    showToast('✓ Záznam upraven');closeEdit();renderZaznamy();
+  }catch(e){showToast('⚠ Chyba: '+e.message);}
+  btn.disabled=false;btn.textContent='✓ Uložit změny';
+}
+
+// ── ZÁZNAMY ───────────────────────────────────────────────────────────────────
 function getMesice(){return[...new Set(remoteZaznamy.map(z=>z.datum.slice(0,7)))].sort().reverse();}
 function fillMesicFilter(){
   const sel=document.getElementById('filter-mesic'),cur=sel.value;
@@ -487,12 +558,18 @@ function renderZaznamy(){
       <div class="zaznam-sarze">Šarže: ${r.sarze}</div>
       <div class="zaznam-znamky"><span class="badge ${r.vzhled}">Vzhled ${r.vzhled}</span><span class="badge ${r.vune}">Vůně ${r.vune}</span><span class="badge ${r.chut}">Chuť ${r.chut}</span></div>
       ${r.poznamka?`<div class="zaznam-poznamka">${r.poznamka}</div>`:''}
-      <div class="zaznam-hodnotitele">👤 ${r.hodnotitele.join(', ')}${r.zadal?' · zadal: '+r.zadal:''}</div>
+      <div class="zaznam-footer">
+        <span class="zaznam-hodnotitele">👤 ${r.hodnotitele.join(', ')}${r.zadal?' · zadal: '+r.zadal:''}</span>
+        <div class="zaznam-akce">
+          <button class="btn-edit" onclick="otevritEdit('${r.id}')">✏️ Upravit</button>
+          <button class="btn-del" onclick="smazatZaznam('${r.id}')">🗑 Smazat</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
 
-// ── DASHBOARD ────────────────────────────────────────────────────────────────
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function renderDashboard(){
   const mesice=getMesice();
   const sel=document.getElementById('dash-mesic'),cur=sel.value;
@@ -521,7 +598,7 @@ function renderDashboard(){
   }).join(''):'<div class="no-data">Žádné B/C šarže – výborný měsíc! 🎉</div>';
 }
 
-// ── NASTAVENÍ ────────────────────────────────────────────────────────────────
+// ── NASTAVENÍ ─────────────────────────────────────────────────────────────────
 function renderNastaveni(){
   ['vyrobky','objemy','hodnotitele'].forEach(k=>renderTags(k+'-list',CFG[k],k));
   renderEanTable();
@@ -535,19 +612,36 @@ function addItem(type,inputId){
   const v=document.getElementById(inputId).value.trim();
   if(v){CFG[type].push(v);saveCfg();renderNastaveni();initForm();document.getElementById(inputId).value='';}
 }
+function renderEanTable(){
+  const entries=Object.entries(CFG.ean);
+  document.getElementById('ean-tbody').innerHTML=entries.length
+    ?entries.map(([ean,v])=>`<tr><td>${ean}</td><td>${v.vyrobek}</td><td>${v.objem}</td><td><button class="tag-del" onclick="delEan('${ean}')">×</button></td></tr>`).join('')
+    :`<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:12px">Zatím žádné EAN kódy</td></tr>`;
+  fillSel('ean-vyrobek',CFG.vyrobky);fillSel('ean-objem',CFG.objemy);
+}
+function addEan(){
+  const ean=document.getElementById('new-ean').value.trim();
+  const vy=document.getElementById('ean-vyrobek').value;
+  const ob=document.getElementById('ean-objem').value;
+  if(!ean||!vy||!ob){showToast('⚠ Vyplňte EAN, výrobek i objem');return;}
+  if(!/^\d{8,14}$/.test(ean)){showToast('⚠ EAN musí mít 8–14 číslic');return;}
+  CFG.ean[ean]={vyrobek:vy,objem:ob};saveCfg();renderEanTable();
+  document.getElementById('new-ean').value='';showToast('✓ EAN přidán');
+}
+function delEan(ean){delete CFG.ean[ean];saveCfg();renderEanTable();}
 
-// ── EXPORT ───────────────────────────────────────────────────────────────────
+// ── EXPORT ────────────────────────────────────────────────────────────────────
 function exportCSV(){
   const mesic=document.getElementById('dash-mesic')?.value;
   let z=mesic?remoteZaznamy.filter(x=>x.datum.startsWith(mesic)):remoteZaznamy;
-  const csv=['Datum hodnocení;Výrobek;Objem;Datum výroby;Šarže;Vzhled;Vůně;Chuť;Poznámka;Hodnotitelé',
-    ...z.map(r=>[r.datum,r.vyrobek,r.objem,r.vyroba,r.sarze,r.vzhled,r.vune,r.chut,r.poznamka||'',r.hodnotitele.join('+')].join(';'))].join('\n');
+  const csv=['Datum hodnocení;Výrobek;Objem;Datum výroby;Šarže;Vzhled;Vůně;Chuť;Poznámka;Hodnotitelé;Zadal',
+    ...z.map(r=>[r.datum,r.vyrobek,r.objem,r.vyroba,r.sarze,r.vzhled,r.vune,r.chut,r.poznamka||'',r.hodnotitele.join('+'),r.zadal||''].join(';'))].join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
   a.download=`senzoricky-denik${mesic?'-'+mesic:''}.csv`;a.click();
 }
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 function fmtDate(d){if(!d)return'';const[y,m,dd]=d.split('-');return`${dd}.${m}.${y}`;}
 function fmtMesic(m){if(!m)return'';const[y,mo]=m.split('-');return['','leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'][+mo]+' '+y;}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
