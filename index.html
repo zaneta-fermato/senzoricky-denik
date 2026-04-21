@@ -201,6 +201,10 @@
   <div class="card"><h2>Výrobky</h2><div class="tag-list" id="vyrobky-list"></div><div class="add-row"><input type="text" id="new-vyrobek" placeholder="Název výrobku"><button class="btn btn-primary" onclick="addItem('vyrobky','new-vyrobek')">+</button></div></div>
   <div class="card"><h2>Objemy</h2><div class="tag-list" id="objemy-list"></div><div class="add-row"><input type="text" id="new-objem" placeholder="např. 250 ml"><button class="btn btn-primary" onclick="addItem('objemy','new-objem')">+</button></div></div>
   <div class="card"><h2>Hodnotitelé</h2><div class="tag-list" id="hodnotitele-list"></div><div class="add-row"><input type="text" id="new-hodnotitel" placeholder="Jméno"><button class="btn btn-primary" onclick="addItem('hodnotitele','new-hodnotitel')">+</button></div></div>
+  <div class="card" style="background:var(--A-bg);border-color:var(--A)">
+    <p style="font-size:13px;color:var(--primary);margin-bottom:8px">⚠ Po každé změně nastavení klikni na tlačítko níže — uložení se projeví u všech uživatelů.</p>
+    <button class="btn btn-primary" style="margin-top:0" onclick="saveSettings()">☁ Uložit nastavení pro všechny</button>
+  </div>
   <div class="card">
     <h2>EAN kódy výrobků</h2>
     <table class="ean-table"><thead><tr><th>EAN</th><th>Výrobek</th><th>Objem</th><th></th></tr></thead><tbody id="ean-tbody"></tbody></table>
@@ -270,14 +274,41 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbyo9FrpbyxGgHmxlmPGYrnGvmpWDtHqhalLa0HjQ-6vzZZSaUwayQquI4-dalYwYkY/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwgpNy7JmTs_ToT-6CpVh6xThQdh4SDFVtv-wvqe9cwajzVwXVqcGCA34JJ15CoBUMS/exec';
 
 let CFG = JSON.parse(localStorage.getItem('sd_cfg')||'{}');
-if(!CFG.vyrobky) CFG.vyrobky=['Dresink Classic','Dresink Pesto','Dresink Chipotle','Omáčka BBQ','Šrub citron','Ocet jablečný'];
-if(!CFG.objemy)  CFG.objemy=['100 ml','250 ml','500 ml','1000 ml'];
-if(!CFG.hodnotitele) CFG.hodnotitele=['Žaneta','Jana','Tomáš','Martin'];
+if(!CFG.vyrobky) CFG.vyrobky=[];
+if(!CFG.objemy)  CFG.objemy=[];
+if(!CFG.hodnotitele) CFG.hodnotitele=[];
 if(!CFG.ean)     CFG.ean={};
 function saveCfg(){localStorage.setItem('sd_cfg',JSON.stringify(CFG));}
+
+async function loadSettings(){
+  try{
+    const r=await fetch(API+'?action=getSettings');
+    const j=await r.json();
+    if(j.ok){
+      CFG.vyrobky=j.vyrobky;
+      CFG.objemy=j.objemy;
+      CFG.hodnotitele=j.hodnotitele;
+      saveCfg();
+      initForm();
+loadSettings();
+    }
+  }catch(e){console.log('Nastavení se nepodařilo načíst',e);}
+}
+
+async function saveSettings(){
+  const payload=encodeURIComponent(JSON.stringify({
+    vyrobky:CFG.vyrobky, objemy:CFG.objemy, hodnotitele:CFG.hodnotitele
+  }));
+  try{
+    const r=await fetch(API+'?action=saveSettings&payload='+payload);
+    const j=await r.json();
+    if(j.ok)showToast('✓ Nastavení uloženo pro všechny');
+    else showToast('⚠ Chyba uložení nastavení');
+  }catch(e){showToast('⚠ Chyba: '+e.message);}
+}
 
 let remoteZaznamy=[], lastFetch=0;
 let znamky={vzhled:null,vune:null,chut:null};
@@ -449,6 +480,7 @@ async function ulozitHodnoceni(){
   const vyroba=document.getElementById('f-vyroba').value;
   const sarze=getSarze('f-vyroba','f-stroj','f-poradi');
   const zadal=document.getElementById('f-zadal').value;
+  const cas=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
   if(!datum||!vyrobek||!objem||!vyroba||!sarze){showToast('⚠ Vyplňte všechna pole');return;}
   if(!znamky.vzhled||!znamky.vune||!znamky.chut){showToast('⚠ Zadejte všechny 3 známky');return;}
   if(selH.length<2){showToast('⚠ Označte min. 2 hodnotitele');return;}
@@ -459,7 +491,7 @@ async function ulozitHodnoceni(){
     await pushZaznam({datum,vyrobek,objem,vyroba,sarze,
       vzhled:znamky.vzhled,vune:znamky.vune,chut:znamky.chut,
       poznamka:document.getElementById('f-poznamka').value,
-      hodnotitele:[...selH],zadal});
+      hodnotitele:[...selH],zadal,cas});
     showToast('✓ Hodnocení uloženo');resetForm();
   }catch(e){showToast('⚠ Chyba: '+e.message);}
   btn.disabled=false;btn.textContent='✓ Uložit hodnocení';
@@ -559,7 +591,7 @@ function renderZaznamy(){
       <div class="zaznam-znamky"><span class="badge ${r.vzhled}">Vzhled ${r.vzhled}</span><span class="badge ${r.vune}">Vůně ${r.vune}</span><span class="badge ${r.chut}">Chuť ${r.chut}</span></div>
       ${r.poznamka?`<div class="zaznam-poznamka">${r.poznamka}</div>`:''}
       <div class="zaznam-footer">
-        <span class="zaznam-hodnotitele">👤 ${r.hodnotitele.join(', ')}${r.zadal?' · zadal: '+r.zadal:''}</span>
+        <span class="zaznam-hodnotitele">👤 ${r.hodnotitele.join(', ')}${r.zadal?' · zadal: '+r.zadal:''}${r.cas?' · '+r.cas:''}</span>
         <div class="zaznam-akce">
           <button class="btn-edit" onclick="otevritEdit('${r.id}')">✏️ Upravit</button>
           <button class="btn-del" onclick="smazatZaznam('${r.id}')">🗑 Smazat</button>
